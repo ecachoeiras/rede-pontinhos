@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>pdv alimentos</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f5f7;--surface:#ffffff;--border:#e0e0e0;--text:#1d1d1f;--text2:#6e6e73;
+  --blue:#185FA5;--green:#0F6E56;--orange:#BA7517;--red:#E24B4A;
+  --info-bg:#EBF2FA;--info-c:#185FA5;--warn-bg:#FEF3E2;--warn-c:#854F0B;
+  --success-bg:#E8F5E9;--success-c:#2E7D32;--danger-bg:#FEECEC;--danger-c:#C62828;
+  --sobra-bg:#F3E5F5;--sobra-c:#6A1B9A;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);min-height:100vh;-webkit-tap-highlight-color:transparent}
+input,select,button{font-family:inherit;outline:none;border:0.5px solid var(--border);border-radius:8px;padding:8px 10px;background:var(--surface);color:var(--text)}
+input:focus,select:focus{border-color:var(--blue)}
+input[type="text"] { text-transform: lowercase; }
+.app{max-width:100%;width:100%;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:var(--bg)}
+@media(min-width:768px){.app{max-width:1024px}}
+.hdr{background:var(--surface);border-bottom:0.5px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:100}
+.hdr h1{font-size:15px;font-weight:600;text-transform: lowercase;}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
+.sdot.off{background:var(--red)}
+.sdot.busy{background:var(--orange);animation:blink .7s infinite alternate}
+@keyframes blink{to{opacity:.2}}
+.pvbadge{font-size:11px;background:var(--info-bg);color:var(--info-c);padding:3px 10px;border-radius:20px;margin-left:auto;cursor:pointer;white-space:nowrap;text-transform: lowercase;}
+.nav{display:flex;background:var(--surface);border-top:0.5px solid var(--border);position:sticky;bottom:0;z-index:100}
+.nav button{flex:1;padding:8px 4px 6px;border:none;background:none;font-size:10px;color:var(--text2);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;border-radius:0;text-transform: lowercase;}
+.nav button.active{color:var(--blue)}
+.nav button svg{width:20px;height:20px}
+.screen{display:none;flex:1;flex-direction:column;overflow-y:auto}
+.screen.active{display:flex}
+
+/* PDV RESPONSIVO HORIZONTAL */
+.pdv-container{display:flex;flex-direction:column;flex:1}
+@media(min-width:600px) and (orientation: landscape){
+  .pdv-container{flex-direction:row;overflow:hidden;height:calc(100vh - 82px)}
+  #screen-pdv{overflow:hidden}
+  .pdv-top{flex:1;overflow-y:auto;border-right:0.5px solid var(--border);border-bottom:none}
+  .cart-wrapper{width:310px;display:flex;flex-direction:column;background:var(--surface);overflow-y:auto}
+}
+.pdv-top{padding:10px 12px;background:var(--surface);border-bottom:0.5px solid var(--border)}
+.srow{display:flex;gap:6px;align-items:center}
+.xbtn{flex:1;padding:8px;font-size:12px;white-space:nowrap;cursor:pointer;background:none;border:0.5px solid var(--border);border-radius:8px;color:var(--text);text-transform: lowercase;;font-weight:600}
+.xbtn.on{background:var(--warn-bg);border-color:var(--orange);color:var(--warn-c)}
+.xbtn.sobra-on{background:var(--sobra-bg);border-color:var(--sobra-c);color:var(--sobra-c)}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px 0 0}
+@media(min-width:600px){.pgrid{grid-template-columns:1fr 1fr 1fr}}
+@media(min-width:850px){.pgrid{grid-template-columns:1fr 1fr 1fr 1fr}}
+@media(min-width:1100px){.pgrid{grid-template-columns:1fr 1fr 1fr 1fr 1fr}}
+
+/* BLOCOS DE PRODUTO COMPACTOS */
+.pc{background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:8px;cursor:pointer;position:relative;overflow:hidden;transition:all .1s;text-transform: lowercase;}
+.pc:active{transform:scale(.97)}
+.pc .pn{font-size:11.5px;font-weight:600;margin-bottom:2px;line-height:1.2;padding-right:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .pp{font-size:13.5px;font-weight:700;color:var(--blue)}
+.pc .pe{font-size:10.5px;color:var(--text2);margin-top:2px;font-weight:500}
+.pc .ai{position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;background:var(--info-bg);color:var(--info-c);display:flex;align-items:center;justify-content:center;font-size:14px}
+
+.pc.selected-cart{background:var(--success-bg);border-color:var(--success-c)}
+.pc.selected-cart .ai{background:var(--success-c);color:#fff;font-weight:600}
+
+.xt{font-size:9px;padding:0px 4px;border-radius:4px;background:var(--warn-bg);color:var(--warn-c);margin-right:3px}
+.st-badge{font-size:9px;padding:0px 4px;border-radius:4px;background:var(--sobra-bg);color:var(--sobra-c);margin-right:3px}
+
+/* CARRINHO ULTRA COMPACTO */
+.cart-area{padding:6px 10px;flex:1}
+.empty{text-align:center;padding:30px 10px;color:var(--text2);font-size:12px;text-transform: lowercase;}
+.ci{background:var(--surface);border-bottom:0.5px solid var(--border);padding:4px 2px;margin-bottom:0;display:flex;align-items:center;gap:6px;text-transform: lowercase;border-radius:0;border-top:none;border-left:none;border-right:none}
+.ci .cn{font-size:12px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci .cp{font-size:11px;color:var(--text2)}
+.qc{display:flex;align-items:center;gap:4px}
+.qc button{width:22px;height:22px;border-radius:50%;border:0.5px solid var(--border);background:none;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text);padding:0}
+.qc span{font-size:12px;font-weight:600;min-width:18px;text-align:center}
+.rmb{background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:0 4px}
+.tarea{background:var(--surface);border-top:0.5px solid var(--border);padding:8px 12px;text-transform: lowercase;}
+.trow{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.tlabel{font-size:12px;color:var(--text2)}
+.tval{font-size:18px;font-weight:700}
+.pgrid2{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px}
+.pb{padding:6px;border:0.5px solid var(--border);border-radius:6px;background:none;font-size:11px;cursor:pointer;color:var(--text);text-transform: lowercase;}
+.pb.sel{background:var(--info-bg);border-color:var(--blue);color:var(--blue);font-weight:600}
+.finbtn{width:100%;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;text-transform: lowercase;}
+.finbtn:disabled{background:#aaa;cursor:not-allowed}
+.cli-badge{font-size:11px;color:var(--text2);text-align:center;margin-bottom:4px;padding:4px;background:var(--bg);border-radius:6px}
+
+/* CADASTRO */
+.cadform{padding:12px;display:flex;flex-direction:column;gap:8px;text-transform: lowercase;}
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:12px;color:var(--text2);font-weight:500}
+.field input{font-size:13px;width:100%;padding:6px 10px}
+.f3-cad{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.cadbtn{padding:10px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;text-transform: lowercase;}
+.cadbtn.edit{background:var(--green)}
+.cancelbtn{padding:10px;background:none;border:0.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text);text-transform: lowercase;}
+.sectitle{font-size:12px;color:var(--text2);font-weight:500;padding:4px 12px;text-transform: lowercase;}
+.clist{padding:8px 12px;display:flex;flex-direction:column;gap:6px;text-transform: lowercase;}
+.cadi{background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:8px;display:flex;align-items:center;gap:6px}
+.cadi.sem-estoque{opacity:.5}
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.tag{font-size:10px;padding:1px 6px;border-radius:4px;background:var(--bg);color:var(--text2)}
+.tag.zero{background:var(--danger-bg);color:var(--danger-c)}
+.editbtn{background:none;border:0.5px solid var(--border);border-radius:6px;cursor:pointer;color:var(--blue);font-size:11px;padding:4px 8px;white-space:nowrap}
+.delbtn{background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:0 2px}
+
+/* OUTROS */
+.cfgwrap, .relwrap{padding:12px;display:flex;flex-direction:column;gap:8px;text-transform: lowercase;}
+.cfgcard, .rcard{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:12px}
+.cfgcard h3, .rcard h3{font-size:13px;font-weight:600;margin-bottom:6px}
+.cfgcard p{font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.4}
+.cfgcard input{font-size:12px;width:100%;margin-bottom:8px}
+.gbtn{padding:10px;width:100%;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;color:#fff;background:var(--green);margin-bottom:6px}
+.sbtn{padding:10px;width:100%;border:0.5px solid var(--border);border-radius:6px;font-size:13px;cursor:pointer;color:var(--text);background:none}
+.slog{font-size:11px;color:var(--text2);margin-top:8px;max-height:100px;overflow-y:auto;background:var(--bg);padding:6px;border-radius:6px;white-space:pre-wrap}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:4px;background:var(--success-bg);color:var(--success-c)}
+.pill.err{background:var(--danger-bg);color:var(--danger-c)}
+.qwarn{font-size:12px;color:var(--warn-c);font-weight:500}
+.pvi{padding:10px;border:0.5px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px}
+.pvi.sel{border-color:var(--blue);background:var(--info-bg);color:var(--blue);font-weight:600}
+.pvdot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.frow{grid-template-columns:1fr 1fr;gap:6px;display:grid}
+.frow select{font-size:12px;text-transform: lowercase;}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.sbox{background:var(--bg);border-radius:6px;padding:8px}
+.sbox .sl{font-size:10px;color:var(--text2);margin-bottom:2px}
+.sbox .sv{font-size:15px;font-weight:700}
+.rtbl{width:100%;border-collapse:collapse;font-size:11px}
+.rtbl th{text-align:left;color:var(--text2);padding:4px 0;border-bottom:0.5px solid var(--border)}
+.rtbl td{padding:5px 0;border-bottom:0.5px solid var(--border);vertical-align:top;word-break:break-word}
+.cov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center}
+.cov.open{display:flex}
+.cbox{background:var(--surface);border-radius:12px;padding:16px;margin:12px;width:100%;max-width:300px;text-transform: lowercase;}
+.bok{padding:10px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;width:100%}
+.vok{text-align:center;padding:4px 0}
+.vok .ico{font-size:32px}
+.vok .vt{font-size:16px;font-weight:700;margin:6px 0 2px}
+.vok small{font-size:12px;color:var(--text2)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="hdr">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <h1 id="htitle">caixa</h1>
+    <span class="sdot" id="sdot" title="verificando..."></span>
+    <span class="pvbadge" id="pvb" onclick="openPV()">📍 ponto 1</span>
+  </div>
+
+  <!-- PDV -->
+  <div class="screen active" id="screen-pdv">
+    <div class="pdv-container">
+      <div class="pdv-top">
+        <div class="srow">
+          <button class="xbtn" id="xbtn" onclick="toggleMode('xepa')">xepa</button>
+          <button class="xbtn" id="sbtn" onclick="toggleMode('sobra')">sobra</button>
+        </div>
+        <div class="pgrid" id="pgrid"></div>
+      </div>
+      <div class="cart-wrapper">
+        <div class="cart-area" id="cart"><div class="empty">toque em um produto para adicionar</div></div>
+        <div id="tarea" style="display:none">
+          <div class="tarea">
+            <div id="cli-badge" class="cli-badge"></div>
+            <div class="trow"><span class="tlabel">total</span><span class="tval" id="tv">r$ 0,00</span></div>
+            <div class="pgrid2">
+              <button class="pb" onclick="selP('dinheiro')">💵 dinheiro</button>
+              <button class="pb" onclick="selP('crédito')">💳 crédito</button>
+              <button class="pb" onclick="selP('débito')">🏦 débito</button>
+              <button class="pb" onclick="selP('pix')">⚡ pix</button>
+            </div>
+            <button class="finbtn" id="finbtn" onclick="finVenda()">finalizar venda</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CADASTRO -->
+  <div class="screen" id="screen-cad">
+    <div class="cadform" id="cadform">
+      <div style="font-size:13px;font-weight:600;color:var(--text)" id="form-title">novo produto</div>
+      <div class="field"><label>nome do produto</label><input type="text" id="cn" placeholder="ex: alface crespa ou peso ex: 200gr"></div>
+      <div class="field"><label>fornecedor (exibido no relatório da planilha)</label><input type="text" id="cf" placeholder="nome do fornecedor"></div>
+      <div class="f3-cad">
+        <div class="field"><label>preço venda</label><input type="number" id="cp" placeholder="0,00" step="0.01" min="0"></div>
+        <div class="field"><label>preço xepa</label><input type="number" id="cx" placeholder="0,00" step="0.01" min="0"></div>
+        <div class="field"><label>preço sobra</label><input type="number" id="cs" placeholder="0,00" step="0.01" min="0"></div>
+      </div>
+      <div class="field"><label>disponível (ex: 200gr ou 1/3)</label><input type="text" id="cq" placeholder="ex: 200gr ou 1/3"></div>
+      <button class="cadbtn" id="cadbtn" onclick="salvarItem()">cadastrar item</button>
+      <button class="cancelbtn" id="cancelbtn" style="display:none" onclick="cancelarEdit()">cancelar edição</button>
+    </div>
+    <div class="sectitle" id="ltitle">itens cadastrados (0)</div>
+    <div class="clist" id="clist"></div>
+  </div>
+
+  <!-- RELATORIOS -->
+  <div class="screen" id="screen-rel">
+    <div class="relwrap">
+      <div class="frow">
+        <select id="rpv" onchange="renderRel()"><option value="all">todos os pontos</option></select>
+        <select id="rmes" onchange="renderRel()"><option value="all">todo período</option></select>
+      </div>
+      <div id="rcontent"></div>
+    </div>
+  </div>
+
+  <!-- CONFIG -->
+  <div class="screen" id="screen-cfg">
+    <div class="cfgwrap">
+      <div class="cfgcard">
+        <h3>conexão google sheets</h3>
+        <p>url configurada automaticamente.</p>
+        <input type="url" id="surl" placeholder="https://script.google.com/macros/s/AKfycbyLbqEZ_ekmoBlmVeSGAxm3dKYRKfRApcyJj4-IsvORG5RiwSqIMuD8siNolkuTVT-5/exec">
+        <button class="gbtn" onclick="saveUrl()">salvar e testar conexão</button>
+        <div id="sstat"></div>
+      </div>
+      <div class="cfgcard">
+        <h3>sincronização de dados</h3>
+        <div id="qarea"><div style="font-size:12px;color:var(--text2)">nenhum item pendente na fila</div></div>
+        <button class="gbtn" style="margin-top:8px" onclick="fetchProdsFromSheets()">🔄 buscar produtos da planilha</button>
+        <button class="sbtn" style="margin-top:4px" onclick="syncAll()">sincronizar fila pendente</button>
+        <div class="slog" id="slog">aguardando atividade…</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <button class="active" id="nav-pdv" onclick="go('pdv')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 001.98 1.61h9.72a2 2 0 001.98-1.61L23 6H6"/></svg>caixa
+    </button>
+    <button id="nav-cad" onclick="go('cad')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>cadastro
+    </button>
+    <button id="nav-rel" onclick="go('rel')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>relatórios
+    </button>
+    <button id="nav-cfg" onclick="go('cfg')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>config
+    </button>
+  </nav>
+</div>
+
+<div class="ov" id="pvov" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="pvsheet"><h2>selecionar ponto de venda</h2><div id="pvlist"></div></div>
+</div>
+<div class="cov" id="cov"><div class="cbox" id="cbox"></div></div>
+
+<script>
+// COLE SUA URL DO SCRIPT ABAIXO
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwZVibVKpZbGhlKwQb_FoDgcRR0NX2uFE7QoNWg2DIz48d4OBkwyhGsyq9AzgNBJ6Pg/exec';
+const PV=['ponto 1','ponto 2','ponto 3','ponto 4','ponto 5','ponto 6','ponto 7','ponto 8'];
+let cpv=0,currentMode='normal',cart=[],pay='',prods=[],vendas=[],nid=1,surl=SCRIPT_URL,queue=[],syncing=false;
+let editId=null;
+
+function getProxCliente(){
+  const hoje=new Date().toISOString().slice(0,10);
+  const chave='cli_'+cpv+'_'+hoje;
+  const n=(parseInt(ls(chave)||'0'))+1;
+  ls(chave,n);
+  return 'p'+(cpv+1)+'-c'+String(n).padStart(3,'0');
+}
+
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,String(v))}catch(e){}}
+function lj(k,v){try{if(v===undefined){const r=localStorage.getItem(k);return r?JSON.parse(r):null}localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
+function save(){lj('pdv_prods',prods);lj('pdv_vendas',vendas);lj('pdv_queue',queue);ls('pdv_nid',nid);}
+function load(){
+  const p=lj('pdv_prods');if(p)prods=p;
+  const v=lj('pdv_vendas');if(v)vendas=v;
+  const q=lj('pdv_queue');if(q)queue=q;
+  const n=ls('pdv_nid');if(n)nid=parseInt(n)||1;
+  const u=ls('pdv_url');if(u)surl=u;
+  const el=document.getElementById('surl');if(el)el.value=surl;
+}
+
+function updDot(){
+  const d=document.getElementById('sdot');
+  if(!surl){d.className='sdot off';d.title='sheets não configurado';}
+  else if(syncing){d.className='sdot busy';d.title='sincronizando...';}
+  else if(queue.length){d.className='sdot off';d.title=queue.length+' pendente(s)';}
+  else{d.className='sdot';d.title='sincronizado com sheets';}
+}
+function addLog(m){const el=document.getElementById('slog');if(!el)return;const t=new Date().toLocaleTimeString('pt-BR');el.textContent=t+' '+m.toLowerCase()+'\n'+el.textContent;}
+
+async function push(type,payload){
+  if(!surl)return false;
+  try{
+    syncing=true;updDot();
+    const r=await fetch(surl,{method:'POST',body:JSON.stringify({type,payload}),headers:{'Content-Type':'text/plain'}});
+    const j=await r.json();
+    syncing=false;updDot();return j&&j.ok===true;
+  }catch(e){syncing=false;updDot();return false;}
+}
+
+async function fetchProdsFromSheets(){
+  if(!surl) return;
+  addLog('buscando produtos da planilha...');
+  try {
+    syncing=true;updDot();
+    const r=await fetch(surl);
+    const j=await r.json();
+    if(j && j.produtos){
+      if(j.produtos.length > 0) {
+        prods = j.produtos;
+        // Atualiza o maior ID local
+        const maxId = Math.max(...prods.map(p => Number(p.id) || 0));
+        if(maxId >= nid) nid = maxId + 1;
+        save();
+        renderGrid();
+        renderCad();
+        addLog('produtos sincronizados (' + prods.length + ')');
+      } else {
+        addLog('nenhum produto retornado.');
+      }
+    }
+  } catch(e) {
+    addLog('erro ao buscar produtos.');
+  } finally {
+    syncing=false;updDot();
+  }
+}
+
+async function syncAll(){
+  if(!surl){addLog('url não configurada.');return;}
+  if(!queue.length){addLog('fila vazia.');return;}
+  addLog('sincronizando '+queue.length+' item(s)...');
+  const fail=[];
+  for(const it of queue){
+    const ok=await push(it.type,it.payload);
+    addLog((ok?'✓ ':'✗ ')+(it.payload.produto||it.payload.nome||'item'));
+    if(!ok)fail.push(it);
+  }
+  queue=fail;save();updDot();renderQ();
+  addLog(fail.length?'concluído com '+fail.length+' erro(s).':'tudo sincronizado!');
+}
+
+function renderQ(){
+  const el=document.getElementById('qarea');if(!el)return;
+  el.innerHTML=queue.length?`<div class="qwarn">⚠ ${queue.length} item(s) aguardando sincronização</div>`
+    :'<div style="font-size:12px;color:var(--text2)">nenhum item pendente na fila</div>';
+}
+
+async function saveUrl(){
+  const u=document.getElementById('surl').value.trim();
+  if(u)surl=u;
+  ls('pdv_url',surl);
+  const st=document.getElementById('sstat');
+  st.innerHTML='<span class="pill" style="background:#fff3cd;color:#856404">testando...</span>';
+  try{
+    const r=await fetch(surl);const j=await r.json();
+    if(j.status==='online'){
+      st.innerHTML='<span class="pill">✓ conectado ao sheets!</span>';
+      addLog('conexão ok. sincronizando fila...');
+      fetchProdsFromSheets();
+      syncAll();
+    }else st.innerHTML='<span class="pill err">resposta inesperada</span>';
+  }catch(e){
+    st.innerHTML='<span class="pill err">erro — verifique a url e permissões</span>';
+    addLog('erro de conexão.');
+  }
+  updDot();
+}
+
+load();
+(async()=>{
+  if(surl){
+    fetchProdsFromSheets();
+    if(queue.length) syncAll();
+  }
+})();
+
+function go(s){
+  document.querySelectorAll('.screen').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(e=>e.classList.remove('active'));
+  document.getElementById('screen-'+s).classList.add('active');
+  document.getElementById('nav-'+s).classList.add('active');
+  document.getElementById('htitle').textContent={pdv:'caixa',cad:'cadastro',rel:'relatórios',cfg:'configurações'}[s];
+  if(s==='cad'){cancelarEdit();renderCad();}
+  if(s==='rel')renderRelFilters();
+  if(s==='cfg'){renderQ();document.getElementById('sstat').innerHTML='<span class="pill">✓ url configurada</span>';}
+  if(s==='pdv')renderGrid();
+}
+
+function openPV(){
+  document.getElementById('pvlist').innerHTML=PV.map((p,i)=>`<div class="pvi ${i===cpv?'sel':''}" onclick="selPV(${i})"><span class="pvdot"></span>${p.toLowerCase()}</div>`).join('');
+  document.getElementById('pvov').classList.add('open');
+}
+function selPV(i){cpv=i;document.getElementById('pvb').textContent='📍 '+PV[i].toLowerCase();document.getElementById('pvov').classList.remove('open');cart=[];pay='';renderCart();renderGrid();}
+
+function renderGrid(){
+  const g=document.getElementById('pgrid');
+  const sortedProds = [...prods].sort((a,b)=>a.nome.localeCompare(b.nome));
+  const f=sortedProds.filter(p=>p.estoque!=='0' && p.estoque!==0);
+  
+  if(!f.length){g.innerHTML='<div style="font-size:11px;color:var(--text2);grid-column:1/-1;padding:4px 0">nenhum produto cadastrado</div>';return;}
+  
+  g.innerHTML=f.map(p=>{
+    let pr=p.preco;
+    if(currentMode==='xepa') pr=p.xepa;
+    if(currentMode==='sobra') pr=p.sobra;
+    
+    const inCart = cart.some(c=>c.id===p.id && c.mode===currentMode);
+    
+    return`<div class="pc ${inCart?'selected-cart':''}" onclick="addC(${p.id})">
+      <div class="ai">+</div>
+      <div class="pn">${p.nome}</div>
+      <div class="pp">r$ ${pr.toFixed(2)}</div>
+      <div class="pe">${p.estoque}</div>
+      ${currentMode==='xepa'?'<span class="xt">xepa</span>':''}
+      ${currentMode==='sobra'?'<span class="st-badge">sobra</span>':''}
+    </div>`;
+  }).join('');
+}
+
+function toggleMode(m){
+  if(currentMode===m) currentMode='normal';
+  else currentMode=m;
+  document.getElementById('xbtn').className='xbtn' + (currentMode==='xepa'?' on':'');
+  document.getElementById('sbtn').className='xbtn' + (currentMode==='sobra'?' sobra-on':'');
+  renderGrid();
+}
+
+function addC(id){
+  const p=prods.find(x=>x.id===id);if(!p)return;
+  let pr=p.preco;
+  if(currentMode==='xepa') pr=p.xepa;
+  if(currentMode==='sobra') pr=p.sobra;
+  
+  const ex=cart.find(c=>c.id===id&&c.mode===currentMode);
+  if(ex)ex.qty=+(ex.qty+1).toFixed(1);
+  else cart.push({id,nome:p.nome,preco:pr,mode:currentMode,qty:1,fornecedor:p.fornecedor});
+  
+  renderCart();
+  renderGrid();
+}
+
+function renderCart(){
+  const ta=document.getElementById('tarea'),cd=document.getElementById('cart');
+  if(!cart.length){ta.style.display='none';cd.innerHTML='<div class="empty">toque em um produto para adicionar</div>';return;}
+  ta.style.display='';
+  const hoje=new Date().toISOString().slice(0,10);
+  const chave='cli_'+cpv+'_'+hoje;
+  const proxNum=(parseInt(ls(chave)||'0'))+1;
+  const proxId='p'+(cpv+1)+'-c'+String(proxNum).padStart(3,'0');
+  document.getElementById('cli-badge').textContent='👤 próximo: '+proxId;
+  
+  cd.innerHTML=cart.map((c,i)=>`<div class="ci">
+    <div style="flex:1; display:flex; justify-content:space-between; align-items:center; padding-right:6px">
+      <div class="cn">${c.nome}${c.mode==='xepa'?' <span class="xt">x</span>':''}${c.mode==='sobra'?' <span class="st-badge">s</span>':''}</div>
+      <div class="cp">r$ ${(c.preco*c.qty).toFixed(2)}</div>
+    </div>
+    <div class="qc">
+      <button onclick="chQ(${i},-1)">−</button>
+      <span>${c.qty}</span>
+      <button onclick="chQ(${i},1)">+</button>
+    </div>
+    <button class="rmb" onclick="rmC(${i})">×</button>
+  </div>`).join('');
+  
+  const total=cart.reduce((a,c)=>a+c.preco*c.qty,0);
+  document.getElementById('tv').textContent='r$ '+total.toFixed(2).replace('.',',');
+  document.querySelectorAll('.pb').forEach(b=>b.classList.toggle('sel',pay&&b.textContent.includes(pay)));
+}
+
+function chQ(i,d){cart[i].qty=Math.max(1,+(cart[i].qty+d).toFixed(1));renderCart();}
+function rmC(i){cart.splice(i,1);renderCart();renderGrid();}
+function selP(m){pay=m;renderCart();}
+
+async function finVenda(){
+  if(!cart.length)return msg('carrinho vazio','adicione produtos ao carrinho.');
+  if(!pay)return msg('forma de pagamento','selecione como o cliente vai pagar.');
+  const btn=document.getElementById('finbtn');
+  btn.disabled=true;btn.textContent='registrando…';
+  const data=new Date().toISOString().slice(0,10);
+  const clienteId=getProxCliente();
+  const novas=[];
+  cart.forEach(c=>{
+    const v={id:nid++,pv:cpv,pvNome:PV[cpv].toLowerCase(),data,cliente:clienteId,produto:c.nome,fornecedor:c.fornecedor,qty:c.qty,preco:c.preco,categoria:c.mode,total:+(c.preco*c.qty).toFixed(2),pagamento:pay};
+    vendas.push(v);novas.push(v);
+  });
+  save();
+  const total=cart.reduce((a,c)=>a+c.preco*c.qty,0),ni=cart.length;
+  cart=[];pay='';
+  btn.disabled=false;btn.textContent='finalizar venda';
+  for(const v of novas){const ok=await push('venda',v);if(!ok){queue.push({type:'venda',payload:v});save();updDot();}}
+  showOk(total,ni,clienteId);renderCart();renderGrid();
+}
+
+function showOk(total,n,clienteId){
+  document.getElementById('cbox').innerHTML=`<div class="vok">
+    <div class="ico">✅</div>
+    <div class="vt">venda registrada!</div>
+    <small>${n} itens · r$ ${total.toFixed(2).replace('.',',')} · ${PV[cpv].toLowerCase()}<br>
+    👤 ${clienteId} · sheets ✓</small>
+  </div>
+  <button class="bok" style="margin-top:10px" onclick="closeC()">ok</button>`;
+  document.getElementById('cov').classList.add('open');
+}
+function msg(t,m){
+  document.getElementById('cbox').innerHTML=`<h2>${t.toLowerCase()}</h2><p>${m.toLowerCase()}</p><button class="bok" onclick="closeC()">ok</button>`;
+  document.getElementById('cov').classList.add('open');
+}
+function closeC(){document.getElementById('cov').classList.remove('open');}
+
+// ── CADASTRO COM SINCRONIZAÇÃO EM NUVEM ──
+async function salvarItem(){
+  const nome=document.getElementById('cn').value.trim().toLowerCase();
+  const fornec=document.getElementById('cf').value.trim().toLowerCase();
+  const preco=parseFloat(document.getElementById('cp').value)||0;
+  const xepa=parseFloat(document.getElementById('cx').value)||0;
+  const sobra=parseFloat(document.getElementById('cs').value)||0;
+  const estoque=document.getElementById('cq').value.trim().toLowerCase() || '0';
+  if(!nome)return msg('campo obrigatório','informe o nome do produto.');
+  if(!preco)return msg('campo obrigatório','informe o preço de venda.');
+
+  let prodObj;
+  if(editId!==null){
+    prodObj=prods.find(x=>x.id===editId);
+    if(prodObj){
+      prodObj.nome=nome;
+      prodObj.fornecedor=fornec||'—';
+      prodObj.preco=preco;
+      prodObj.xepa=xepa;
+      prodObj.sobra=sobra;
+      prodObj.estoque=estoque;
+    }
+    editId=null;
+  }else{
+    prodObj={id:nid++,nome,fornecedor:fornec||'—',preco,xepa,sobra,estoque};
+    prods.push(prodObj);
+  }
+  save();
+  
+  // Limpa o formulário
+  ['cn','cf','cp','cx','cs','cq'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cadbtn').textContent='cadastrar item';
+  document.getElementById('cadbtn').classList.remove('edit');
+  document.getElementById('cancelbtn').style.display='none';
+  document.getElementById('form-title').textContent='novo produto';
+  renderCad();renderGrid();
+
+  // Envia atualização para o Google Sheets
+  const ok = await push('produto', prodObj);
+  if(!ok){
+    queue.push({type:'produto', payload:prodObj});
+    save();
+    updDot();
+  }
+}
+
+function editarProd(id){
+  const p=prods.find(x=>x.id===id);if(!p)return;
+  editId=id;
+  document.getElementById('cn').value=p.nome;
+  document.getElementById('cf').value=p.fornecedor==='—'?'':p.fornecedor;
+  document.getElementById('cp').value=p.preco;
+  document.getElementById('cx').value=p.xepa;
+  document.getElementById('cs').value=p.sobra||0;
+  document.getElementById('cq').value=p.estoque;
+  document.getElementById('cadbtn').textContent='salvar alterações';
+  document.getElementById('cadbtn').classList.add('edit');
+  document.getElementById('cancelbtn').style.display='';
+  document.getElementById('form-title').textContent='editando: '+p.nome;
+  document.getElementById('cadform').scrollIntoView({behavior:'smooth'});
+}
+
+function cancelarEdit(){
+  editId=null;
+  ['cn','cf','cp','cx','cs','cq'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cadbtn').textContent='cadastrar item';
+  document.getElementById('cadbtn').classList.remove('edit');
+  document.getElementById('cancelbtn').style.display='none';
+  document.getElementById('form-title').textContent='novo produto';
+}
+
+function renderCad(){
+  document.getElementById('ltitle').textContent=`itens cadastrados (${prods.length})`;
+  const sortedCad = [...prods].sort((a,b)=>a.nome.localeCompare(b.nome));
+  
+  document.getElementById('clist').innerHTML=sortedCad.map(p=>`<div class="cadi${(p.estoque==='0'||p.estoque===0)?' sem-estoque':''}">
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:600">${p.nome}</div>
+      <div style="font-size:11px;color:var(--text2)">forn: ${p.fornecedor}</div>
+      <div class="tags">
+        <span class="tag">r$ ${p.preco.toFixed(2)}</span>
+        <span class="tag" style="background:var(--warn-bg);color:var(--warn-c)">x r$ ${(p.xepa||0).toFixed(2)}</span>
+        <span class="tag" style="background:var(--sobra-bg);color:var(--sobra-c)">s r$ ${(p.sobra||0).toFixed(2)}</span>
+        <span class="tag">${p.estoque}</span>
+      </div>
+    </div>
+    <button class="editbtn" onclick="editarProd(${p.id})">✏️</button>
+    <button class="delbtn" onclick="delP(${p.id})">×</button>
+  </div>`).join('');
+}
+
+async function delP(id){
+  if(editId===id)cancelarEdit();
+  prods=prods.filter(p=>p.id!==id);
+  save();renderCad();renderGrid();
+  
+  const ok = await push('deletar_produto', {id: id});
+  if(!ok){
+    queue.push({type:'deletar_produto', payload:{id: id}});
+    save();
+    updDot();
+  }
+}
+
+function renderRelFilters(){
+  const pv=document.getElementById('rpv');
+  pv.innerHTML='<option value="all">todos os pontos</option>'+PV.map((p,i)=>`<option value="${i}">${p.toLowerCase()}</option>`).join('');
+  const ms=[...new Set(vendas.map(v=>v.data.slice(0,7)))].sort().reverse();
+  document.getElementById('rmes').innerHTML='<option value="all">todo período</option>'+ms.map(m=>`<option value="${m}">${m}</option>`).join('');
+  renderRel();
+}
+
+function renderRel(){
+  const pf=document.getElementById('rpv').value,mf=document.getElementById('rmes').value;
+  const f=vendas.filter(v=>(pf==='all'||v.pv===parseInt(pf))&&(mf==='all'||v.data.startsWith(mf)));
+  const tr=f.reduce((a,v)=>a+v.total,0);
+  
+  document.getElementById('rcontent').innerHTML=`
+    <div class="rcard"><h3>resumo geral</h3>
+      <div class="sgrid">
+        <div class="sbox"><div class="sl">faturamento</div><div class="sv">r$ ${tr.toFixed(2)}</div></div>
+        <div class="sbox"><div class="sl">vendas</div><div class="sv"># ${f.length}</div></div>
+      </div>
+    </div>
+    <div class="rcard"><h3>itens (enviados p/ planilha com fornecedor)</h3>
+      <table class="rtbl"><tr><th>prod</th><th>forn</th><th>val</th></tr>
+      ${f.map(v=>`<tr><td>${v.produto}</td><td>${v.fornecedor||'—'}</td><td>r$ ${v.total.toFixed(2)}</td></tr>`).join('')||'<tr><td colspan="3">sem dados</td></tr>'}
+      </table>
+    </div>`;
+}
+
+updDot();
+renderGrid();
+</script>
+</body>
+</html>
